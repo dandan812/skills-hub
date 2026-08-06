@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-08-06
+
+### 修复
+- **中心存储目录提示**：从本地目录添加 Skill 时，如果与用户直接放入 Skills Hub 中心存储目录的文件夹冲突，错误提示现在会说明该目录由应用自动管理，并指引用户将 Skill 移出后重新导入（[#103](https://github.com/qufei1993/skills-hub/issues/103)）。
+
 ## [0.8.0] - 2026-07-17
 
 ### 新增
@@ -209,6 +214,7 @@
 ### 性能
 - Git 导入/批量安装优化：缓存 clone 减少重复拉取；增加超时与无交互提示提升稳定性。
 
-[Unreleased]: https://github.com/qufei1993/skills-hub/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/qufei1993/skills-hub/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/qufei1993/skills-hub/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/qufei1993/skills-hub/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/qufei1993/skills-hub/compare/v0.7.0...v0.7.1
