@@ -13,6 +13,7 @@ pub enum ToolId {
     Cursor,
     ClaudeCode,
     Codex,
+    DeepSeekHarness,
     OpenCode,
     Antigravity,
     Amp,
@@ -64,6 +65,7 @@ impl ToolId {
             ToolId::Cursor => "cursor",
             ToolId::ClaudeCode => "claude_code",
             ToolId::Codex => "codex",
+            ToolId::DeepSeekHarness => "deepseek_harness",
             ToolId::OpenCode => "opencode",
             ToolId::Antigravity => "antigravity",
             ToolId::Amp => "amp",
@@ -456,6 +458,13 @@ pub fn default_tool_adapters() -> Vec<ToolAdapter> {
             relative_detect_dir: ".codex",
         },
         ToolAdapter {
+            id: ToolId::DeepSeekHarness,
+            display_name: "DeepSeek Harness",
+            // DeepSeek Harness default DSH_HOME is ~/.dsh.
+            relative_skills_dir: ".dsh/skills",
+            relative_detect_dir: ".dsh",
+        },
+        ToolAdapter {
             id: ToolId::OpenCode,
             display_name: "OpenCode",
             // add-skill global path: ~/.config/opencode/skills/
@@ -809,6 +818,7 @@ pub fn project_relative_skills_dir(adapter: &ToolAdapter) -> &'static str {
         ToolId::CodeWhale => ".codewhale/skills",
         ToolId::WorkBuddy => ".workbuddy/skills",
         ToolId::Codex => ".agents/skills",
+        ToolId::DeepSeekHarness => ".dsh/skills",
         ToolId::CommandCode => ".commandcode/skills",
         ToolId::Continue => ".continue/skills",
         ToolId::Crush => ".crush/skills",
@@ -874,6 +884,21 @@ pub fn scan_tool_dir(tool: &ToolAdapter, dir: &Path) -> Result<Vec<DetectedSkill
 
         let name = entry.file_name().to_string_lossy().to_string();
         if tool.id == ToolId::Codex && name == ".system" {
+            continue;
+        }
+        let has_skill_file = std::fs::read_dir(&path)
+            .ok()
+            .into_iter()
+            .flatten()
+            .filter_map(Result::ok)
+            .any(|child| {
+                child
+                    .file_name()
+                    .to_string_lossy()
+                    .eq_ignore_ascii_case("SKILL.md")
+                    && child.path().is_file()
+            });
+        if !has_skill_file {
             continue;
         }
         let (is_link, link_target) = detect_link(&path);

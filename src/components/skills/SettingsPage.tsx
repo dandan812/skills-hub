@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, Database, ExternalLink, Github, Palette, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Database, ExternalLink, Github, Palette, Radar, RefreshCw } from 'lucide-react'
 import { openUrl } from '@tauri-apps/plugin-opener'
 import type { TFunction } from 'i18next'
 import type { DownloadOptions, Update } from '@tauri-apps/plugin-updater'
@@ -29,6 +29,8 @@ type SettingsPageProps = {
   themePreference: 'system' | 'light' | 'dark'
   githubToken: string
   githubProxyConfig: GithubProxyConfigDto
+  discoveryScanEnabledCount: number
+  discoveryScanSourceCount: number
   onPickStoragePath: () => void
   onToggleLanguage: () => void
   onThemeChange: (nextTheme: 'system' | 'light' | 'dark') => void
@@ -37,6 +39,7 @@ type SettingsPageProps = {
   onClearGitCacheNow: () => void
   onGithubTokenChange: (token: string) => void
   onGithubProxyConfigChange: (enabled: boolean, port: number) => void
+  onOpenDiscoveryScanSettings: () => void
   onBack: () => void
   t: TFunction
 }
@@ -58,6 +61,9 @@ const SettingsPage = ({
   onGithubTokenChange,
   githubProxyConfig,
   onGithubProxyConfigChange,
+  discoveryScanEnabledCount,
+  discoveryScanSourceCount,
+  onOpenDiscoveryScanSettings,
   onBack,
   t,
 }: SettingsPageProps) => {
@@ -268,6 +274,38 @@ const SettingsPage = ({
                       {t('themeOptions.dark')}
                     </button>
                   </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="settings-card">
+              <div className="settings-card-head">
+                <span className="settings-card-icon">
+                  <Radar size={18} />
+                </span>
+                <div>
+                  <h2>{t('discoveryScan.settingsTitle')}</h2>
+                  <p>{t('discoveryScan.settingsDescription')}</p>
+                </div>
+              </div>
+              <div className="settings-card-body">
+                <div className="settings-project-row discovery-settings-row">
+                  <div className="settings-item-info">
+                    <div className="settings-item-title">{t('discoveryScan.sources')}</div>
+                    <div className="settings-item-desc">
+                      {t('discoveryScan.enabledCount', {
+                        enabled: discoveryScanEnabledCount,
+                        total: discoveryScanSourceCount,
+                      })}
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    type="button"
+                    onClick={onOpenDiscoveryScanSettings}
+                  >
+                    {t('discoveryScan.manage')}
+                  </button>
                 </div>
               </div>
             </section>

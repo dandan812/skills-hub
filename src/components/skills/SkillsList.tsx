@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { MessageCircle } from 'lucide-react'
+import { MessageCircle, SlidersHorizontal } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import type { ManagedSkill, OnboardingPlan, ToolOption } from './types'
 import SkillCard from './SkillCard'
@@ -21,6 +21,7 @@ type SkillsListProps = {
   getSkillSourceLabel: (skill: ManagedSkill) => string
   formatRelative: (ms: number | null | undefined) => string
   onReviewImport: () => void
+  onOpenScanSettings: () => void
   onUpdateSkill: (skill: ManagedSkill) => void
   onDeleteSkill: (skillId: string) => void
   onToggleSkillEnabled: (skill: ManagedSkill) => void
@@ -46,6 +47,7 @@ const SkillsList = ({
   getSkillSourceLabel,
   formatRelative,
   onReviewImport,
+  onOpenScanSettings,
   onUpdateSkill,
   onDeleteSkill,
   onToggleSkillEnabled,
@@ -87,14 +89,25 @@ const SkillsList = ({
               </div>
             </div>
           </div>
-          <button
-            className="btn btn-warning"
-            type="button"
-            onClick={onReviewImport}
-            disabled={loading}
-          >
-            {t('reviewImport')}
-          </button>
+          <div className="discovered-banner-actions">
+            <button
+              className="btn btn-secondary"
+              type="button"
+              onClick={onOpenScanSettings}
+              disabled={loading}
+            >
+              <SlidersHorizontal size={15} />
+              {t('discoveryScan.action')}
+            </button>
+            <button
+              className="btn btn-warning"
+              type="button"
+              onClick={onReviewImport}
+              disabled={loading}
+            >
+              {t('reviewImport')}
+            </button>
+          </div>
         </div>
       ) : null}
 

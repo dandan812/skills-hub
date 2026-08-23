@@ -4,8 +4,9 @@ use crate::core::skill_store::{SkillRecord, SkillStore, SkillTargetRecord};
 use crate::core::sync_engine::SyncMode;
 use crate::core::tool_adapters::{
     adapter_by_key, adapters_sharing_project_skills_dir, adapters_sharing_skills_dir,
-    load_tool_config, project_relative_skills_dir, resolve_project_path, save_tool_config,
-    scan_tool_dir, supports_project_scope, CustomToolConfig, ToolAdapter, ToolConfig, ToolId,
+    default_tool_adapters, load_tool_config, project_relative_skills_dir, resolve_project_path,
+    save_tool_config, scan_tool_dir, supports_project_scope, CustomToolConfig, ToolAdapter,
+    ToolConfig, ToolId,
 };
 
 fn make_custom_tool(key: &str, label: &str, skills_dir: &str) -> CustomToolConfig {
@@ -168,14 +169,53 @@ fn adapter_by_key_finds_known_tool() {
 }
 
 #[test]
+fn builtin_tool_count_matches_v090_documentation() {
+    assert_eq!(default_tool_adapters().len(), 47);
+}
+
+#[test]
 fn adapter_by_key_finds_new_tools() {
     assert!(adapter_by_key("kimi_cli").is_some());
     assert!(adapter_by_key("augment").is_some());
     assert!(adapter_by_key("openclaw").is_some());
     assert!(adapter_by_key("command_code").is_some());
     assert!(adapter_by_key("qwen_code").is_some());
+    assert!(adapter_by_key("deepseek_harness").is_some());
     assert!(adapter_by_key("hermes_agent").is_some());
     assert!(adapter_by_key("workbuddy").is_some());
+}
+
+#[test]
+fn deepseek_harness_adapter_uses_native_skill_dirs() {
+    let deepseek_harness = adapter_by_key("deepseek_harness").unwrap();
+
+    assert_eq!(deepseek_harness.id, ToolId::DeepSeekHarness);
+    assert_eq!(deepseek_harness.relative_skills_dir, ".dsh/skills");
+    assert_eq!(deepseek_harness.relative_detect_dir, ".dsh");
+    assert_eq!(
+        project_relative_skills_dir(&deepseek_harness),
+        ".dsh/skills"
+    );
+    assert!(supports_project_scope(&deepseek_harness));
+}
+
+#[test]
+fn deepseek_harness_scan_discovers_directory_skill() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::create_dir_all(dir.path().join("release-check")).unwrap();
+    fs::write(
+        dir.path().join("release-check/SKILL.md"),
+        "---\nname: release-check\ndescription: Release check\n---\n",
+    )
+    .unwrap();
+
+    let deepseek_harness = adapter_by_key("deepseek_harness").unwrap();
+    let detected = scan_tool_dir(&deepseek_harness, dir.path()).unwrap();
+
+    assert_eq!(detected.len(), 1);
+    assert_eq!(detected[0].tool, ToolId::DeepSeekHarness);
+    assert_eq!(detected[0].name, "release-check");
+    assert_eq!(detected[0].path, dir.path().join("release-check"));
 }
 
 #[test]
@@ -297,7 +337,9 @@ fn scan_tool_dir_skips_codex_system_and_includes_symlink_dir() {
     let dir = tempfile::tempdir().unwrap();
 
     fs::create_dir_all(dir.path().join("a")).unwrap();
+    fs::write(dir.path().join("a/SKILL.md"), "# Skill A").unwrap();
     fs::create_dir_all(dir.path().join(".system")).unwrap();
+    fs::write(dir.path().join(".system/SKILL.md"), "# System Skill").unwrap();
     fs::write(dir.path().join("not-a-dir"), b"x").unwrap();
 
     #[cfg(unix)]
@@ -333,6 +375,7 @@ fn scan_tool_dir_skips_app_support_path() {
         .path()
         .join("Library/Application Support/com.tauri.dev/skills");
     std::fs::create_dir_all(root.join("foo")).unwrap();
+    std::fs::write(root.join("foo/SKILL.md"), "# Ignored Skill").unwrap();
 
     let tool = ToolAdapter {
         id: ToolId::Cursor,

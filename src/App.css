@@ -435,6 +435,13 @@
   color: var(--text-secondary);
 }
 
+.discovered-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
 .skill-card {
   background: var(--bg-app);
   border: 1px solid var(--border-subtle);
@@ -1424,6 +1431,94 @@
 
 .modal-footer.space-between {
   justify-content: space-between;
+}
+
+.discovery-scan-modal {
+  width: min(640px, 100%);
+}
+
+.discovery-scan-description {
+  margin-top: 5px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.discovery-scan-body {
+  gap: 12px;
+}
+
+.discovery-scan-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.discovery-scan-summary span {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.discovery-scan-list {
+  overflow-y: auto;
+  max-height: min(420px, 52vh);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-app);
+}
+
+.discovery-scan-source {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.discovery-scan-source:last-child {
+  border-bottom: 0;
+}
+
+.discovery-scan-source-icon {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--accent-primary);
+  background: var(--accent-soft-bg);
+}
+
+.discovery-scan-source-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.discovery-scan-source-copy strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.discovery-scan-source-copy span {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discovery-scan-helper {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .modal-delete .delete-body {
@@ -3811,6 +3906,11 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+.discovery-settings-row {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
 .settings-project-link {
   display: inline-flex;
   align-items: center;
@@ -4729,6 +4829,16 @@
 }
 
 @media (max-width: 760px) {
+  .discovered-banner {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .discovered-banner-actions {
+    justify-content: flex-end;
+  }
+
   .settings-shell {
     width: 100%;
     padding: 16px 16px 36px;

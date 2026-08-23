@@ -24,12 +24,15 @@ Skills Hub installs skills into one central repository, then syncs them to tools
 - **Automatic updates**: Update Git and local-source skills on a schedule, with visible failure details.
 - **Detail view**: Browse skill file trees, Markdown content, and code snippets.
 - **Migration**: Scan and import existing local skills into one managed library.
+- **Discovery controls**: Choose which installed tool directories participate in import discovery.
 
 ## Interface Preview
 
 ### My Skills — Managed Skills and Bulk Actions
 
 My Skills provides card and list views for each managed skill's source, tags, sync scope, target tools, and enabled state. The toolbar supports scope filtering, sorting, tag filtering, search, and bulk actions.
+
+When Skills Hub discovers importable Skills in installed tool directories, the discovery banner lets you review them or open Scan settings. Scan sources are independent from sync targets, persist across restarts, and remain accessible from Settings. Only directories containing `SKILL.md` are shown as importable Skills.
 
 ![My Skills card view](docs/assets/my-skills-card-view.png)
 
@@ -75,13 +78,14 @@ Settings keeps app-level preferences such as interface language, appearance, sto
 
 ## Supported AI Coding Tools
 
-Skills Hub includes 46 built-in tool adapters and supports custom skills directories from Management Center. Project skills directories are relative to the selected project root. Tools marked `N/A` do not have a confirmed project-level skills directory and are supported for global sync only.
+Skills Hub includes 47 built-in tool adapters and supports custom skills directories from Management Center. Project skills directories are relative to the selected project root. Tools marked `N/A` do not have a confirmed project-level skills directory and are supported for global sync only.
 
 | tool key | Display name | global skills dir (relative to `~`) | project skills dir (relative to project) | detected if exists (relative to `~`) |
 | --- | --- | --- | --- | --- |
 | `cursor` | Cursor | `.cursor/skills` | `.agents/skills` | `.cursor` |
 | `claude_code` | Claude Code | `.claude/skills` | `.claude/skills` | `.claude` |
 | `codex` | Codex | `.codex/skills` | `.agents/skills` | `.codex` |
+| `deepseek_harness` | DeepSeek Harness | `.dsh/skills` | `.dsh/skills` | `.dsh` |
 | `opencode` | OpenCode | `.config/opencode/skills` | `.agents/skills` | `.config/opencode` |
 | `antigravity` | Antigravity | `.gemini/config/skills` | `.agents/skills` | `.gemini/config` |
 | `amp` | Amp | `.config/agents/skills` | `.agents/skills` | `.config/agents` |

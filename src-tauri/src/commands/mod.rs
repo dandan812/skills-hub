@@ -33,7 +33,10 @@ use crate::core::network_proxy::{
     set_github_proxy_config as set_github_proxy_config_core,
     set_github_proxy_url as set_github_proxy_url_core, GithubProxyConfig,
 };
-use crate::core::onboarding::{build_onboarding_plan, OnboardingPlan};
+use crate::core::onboarding::{
+    build_onboarding_plan, get_discovery_scan_settings as get_discovery_scan_settings_core,
+    save_discovery_scan_config, DiscoveryScanConfig, DiscoveryScanSettings, OnboardingPlan,
+};
 use crate::core::skill_store::{SkillStore, SkillTargetRecord};
 use crate::core::skills_search::{
     search_skills_online as search_skills_online_core, OnlineSkillResult,
@@ -395,6 +398,32 @@ pub async fn get_onboarding_plan(
         .await
         .map_err(|err| err.to_string())?
         .map_err(format_anyhow_error)
+}
+
+#[tauri::command]
+pub async fn get_discovery_scan_settings(
+    store: State<'_, SkillStore>,
+) -> Result<DiscoveryScanSettings, String> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || get_discovery_scan_settings_core(&store))
+        .await
+        .map_err(|err| err.to_string())?
+        .map_err(format_anyhow_error)
+}
+
+#[tauri::command]
+pub async fn set_discovery_scan_config(
+    store: State<'_, SkillStore>,
+    config: DiscoveryScanConfig,
+) -> Result<DiscoveryScanSettings, String> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        save_discovery_scan_config(&store, config)?;
+        get_discovery_scan_settings_core(&store)
+    })
+    .await
+    .map_err(|err| err.to_string())?
+    .map_err(format_anyhow_error)
 }
 
 #[tauri::command]

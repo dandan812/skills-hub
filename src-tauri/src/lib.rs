@@ -129,6 +129,8 @@ pub fn run() {
             commands::run_auto_update_now,
             commands::trigger_auto_update_task_now_cmd,
             commands::get_onboarding_plan,
+            commands::get_discovery_scan_settings,
+            commands::set_discovery_scan_config,
             commands::install_local,
             commands::list_local_skills_cmd,
             commands::install_local_selection,

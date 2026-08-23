@@ -10,6 +10,29 @@ use super::content_hash::hash_dir;
 use super::skill_store::SkillStore;
 use super::tool_adapters::{default_tool_adapters, scan_tool_dir, DetectedSkill};
 
+const DISCOVERY_SCAN_CONFIG_SETTING: &str = "discovery_scan_config_v1";
+const CLAUDE_PLUGIN_SOURCE_KEY: &str = "claude_plugins";
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub struct DiscoveryScanConfig {
+    #[serde(default)]
+    pub disabled_source_keys: Vec<String>,
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+pub struct DiscoveryScanSource {
+    pub key: String,
+    pub label: String,
+    pub path: PathBuf,
+    pub enabled: bool,
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+pub struct DiscoveryScanSettings {
+    pub sources: Vec<DiscoveryScanSource>,
+    pub disabled_source_keys: Vec<String>,
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct OnboardingVariant {
     pub tool: String,
@@ -59,12 +82,118 @@ pub fn build_onboarding_plan<R: tauri::Runtime>(
         }
     }
     let claude_config_dir = resolve_claude_config_dir(&home);
+    let disabled_source_keys = load_discovery_scan_config(store)?
+        .disabled_source_keys
+        .into_iter()
+        .collect::<HashSet<_>>();
     build_onboarding_plan_with_claude_dir(
         &home,
         &claude_config_dir,
         Some(&central),
         Some(&managed_targets),
+        &disabled_source_keys,
     )
+}
+
+pub fn get_discovery_scan_settings(store: &SkillStore) -> Result<DiscoveryScanSettings> {
+    let home =
+        dirs::home_dir().ok_or_else(|| anyhow::anyhow!("failed to resolve home directory"))?;
+    let claude_config_dir = resolve_claude_config_dir(&home);
+    let config = load_discovery_scan_config(store)?;
+    Ok(get_discovery_scan_settings_in_home(
+        &home,
+        &claude_config_dir,
+        config,
+    ))
+}
+
+fn get_discovery_scan_settings_in_home(
+    home: &Path,
+    claude_config_dir: &Path,
+    config: DiscoveryScanConfig,
+) -> DiscoveryScanSettings {
+    let disabled_source_keys = config.disabled_source_keys;
+    let disabled = disabled_source_keys.iter().cloned().collect::<HashSet<_>>();
+    let mut sources = Vec::<DiscoveryScanSource>::new();
+    let mut source_indexes = HashMap::<String, usize>::new();
+
+    for adapter in default_tool_adapters() {
+        if !home.join(adapter.relative_detect_dir).exists() {
+            continue;
+        }
+        let key = tool_scan_source_key(adapter.relative_skills_dir);
+        if let Some(index) = source_indexes.get(&key).copied() {
+            let source = &mut sources[index];
+            source.label.push_str(" / ");
+            source.label.push_str(adapter.display_name);
+            continue;
+        }
+        source_indexes.insert(key.clone(), sources.len());
+        sources.push(DiscoveryScanSource {
+            enabled: !disabled.contains(&key),
+            key,
+            label: adapter.display_name.to_string(),
+            path: home.join(adapter.relative_skills_dir),
+        });
+    }
+
+    let claude_plugins_dir = claude_config_dir.join("plugins");
+    if claude_plugins_dir.exists() {
+        sources.push(DiscoveryScanSource {
+            key: CLAUDE_PLUGIN_SOURCE_KEY.to_string(),
+            label: "Claude plugin Skills".to_string(),
+            path: claude_plugins_dir,
+            enabled: !disabled.contains(CLAUDE_PLUGIN_SOURCE_KEY),
+        });
+    }
+
+    DiscoveryScanSettings {
+        sources,
+        disabled_source_keys,
+    }
+}
+
+pub fn save_discovery_scan_config(
+    store: &SkillStore,
+    config: DiscoveryScanConfig,
+) -> Result<DiscoveryScanConfig> {
+    let mut seen = HashSet::new();
+    let mut disabled_source_keys = Vec::new();
+    for key in config.disabled_source_keys {
+        if is_valid_scan_source_key(&key) && seen.insert(key.clone()) {
+            disabled_source_keys.push(key);
+        }
+    }
+    let config = DiscoveryScanConfig {
+        disabled_source_keys,
+    };
+    store.set_setting(
+        DISCOVERY_SCAN_CONFIG_SETTING,
+        &serde_json::to_string(&config)?,
+    )?;
+    Ok(config)
+}
+
+fn load_discovery_scan_config(store: &SkillStore) -> Result<DiscoveryScanConfig> {
+    let raw = store.get_setting(DISCOVERY_SCAN_CONFIG_SETTING)?;
+    Ok(raw
+        .as_deref()
+        .and_then(|value| serde_json::from_str(value).ok())
+        .unwrap_or_default())
+}
+
+fn tool_scan_source_key(relative_skills_dir: &str) -> String {
+    format!(
+        "tool_dir:{}",
+        relative_skills_dir.replace(std::path::MAIN_SEPARATOR, "/")
+    )
+}
+
+fn is_valid_scan_source_key(key: &str) -> bool {
+    key == CLAUDE_PLUGIN_SOURCE_KEY
+        || default_tool_adapters()
+            .iter()
+            .any(|adapter| tool_scan_source_key(adapter.relative_skills_dir) == key)
 }
 
 #[cfg(test)]
@@ -78,6 +207,7 @@ fn build_onboarding_plan_in_home(
         &home.join(".claude"),
         exclude_root,
         exclude_managed_targets,
+        &HashSet::new(),
     )
 }
 
@@ -86,6 +216,7 @@ fn build_onboarding_plan_with_claude_dir(
     claude_config_dir: &Path,
     exclude_root: Option<&Path>,
     exclude_managed_targets: Option<&std::collections::HashSet<String>>,
+    disabled_source_keys: &HashSet<String>,
 ) -> Result<OnboardingPlan> {
     let adapters = default_tool_adapters();
     let mut all_detected: Vec<DetectedSkill> = Vec::new();
@@ -94,6 +225,9 @@ fn build_onboarding_plan_with_claude_dir(
 
     for adapter in &adapters {
         if !home.join(adapter.relative_detect_dir).exists() {
+            continue;
+        }
+        if disabled_source_keys.contains(&tool_scan_source_key(adapter.relative_skills_dir)) {
             continue;
         }
         scanned += 1;
@@ -130,27 +264,31 @@ fn build_onboarding_plan_with_claude_dir(
         .iter()
         .filter_map(|skill| fs::canonicalize(&skill.path).ok())
         .collect::<HashSet<_>>();
-    let plugin_variants = discover_claude_plugin_skills(claude_config_dir)
-        .into_iter()
-        .filter(|variant| {
-            let canonical_path =
-                fs::canonicalize(&variant.path).unwrap_or_else(|_| variant.path.clone());
-            if !seen_source_paths.insert(canonical_path) {
+    let plugin_variants = if disabled_source_keys.contains(CLAUDE_PLUGIN_SOURCE_KEY) {
+        Vec::new()
+    } else {
+        discover_claude_plugin_skills(claude_config_dir)
+    }
+    .into_iter()
+    .filter(|variant| {
+        let canonical_path =
+            fs::canonicalize(&variant.path).unwrap_or_else(|_| variant.path.clone());
+        if !seen_source_paths.insert(canonical_path) {
+            return false;
+        }
+        if let Some(exclude_root) = exclude_root {
+            if is_under(&variant.path, exclude_root) {
                 return false;
             }
-            if let Some(exclude_root) = exclude_root {
-                if is_under(&variant.path, exclude_root) {
-                    return false;
-                }
+        }
+        if let Some(exclude) = exclude_managed_targets {
+            if exclude.contains(&managed_target_key(&variant.tool, &variant.path)) {
+                return false;
             }
-            if let Some(exclude) = exclude_managed_targets {
-                if exclude.contains(&managed_target_key(&variant.tool, &variant.path)) {
-                    return false;
-                }
-            }
-            true
-        })
-        .collect::<Vec<_>>();
+        }
+        true
+    })
+    .collect::<Vec<_>>();
     if !plugin_variants.is_empty() && !scanned_claude {
         scanned += 1;
     }

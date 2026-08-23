@@ -9,12 +9,12 @@ fn groups_by_name_and_detects_conflicts_by_fingerprint() {
     // Cursor installed
     fs::create_dir_all(home.path().join(".cursor")).unwrap();
     fs::create_dir_all(home.path().join(".cursor/skills/foo")).unwrap();
-    fs::write(home.path().join(".cursor/skills/foo/a.txt"), b"cursor").unwrap();
+    fs::write(home.path().join(".cursor/skills/foo/SKILL.md"), b"cursor").unwrap();
 
     // Codex installed
     fs::create_dir_all(home.path().join(".codex")).unwrap();
     fs::create_dir_all(home.path().join(".codex/skills/foo")).unwrap();
-    fs::write(home.path().join(".codex/skills/foo/a.txt"), b"codex").unwrap();
+    fs::write(home.path().join(".codex/skills/foo/SKILL.md"), b"codex").unwrap();
 
     // Codex .system should be ignored
     fs::create_dir_all(home.path().join(".codex/skills/.system")).unwrap();
@@ -42,6 +42,7 @@ fn excludes_central_repo_path() {
 
     let central = home.path().join("central");
     std::fs::create_dir_all(central.join("skill-a")).unwrap();
+    std::fs::write(central.join("skill-a/SKILL.md"), "# Skill A").unwrap();
 
     let link_path = home.path().join(".cursor/skills/skill-a");
     symlink(central.join("skill-a"), &link_path).unwrap();
@@ -57,7 +58,7 @@ fn excludes_managed_skill_targets() {
     // Cursor installed
     fs::create_dir_all(home.path().join(".cursor")).unwrap();
     fs::create_dir_all(home.path().join(".cursor/skills/foo")).unwrap();
-    fs::write(home.path().join(".cursor/skills/foo/a.txt"), b"cursor").unwrap();
+    fs::write(home.path().join(".cursor/skills/foo/SKILL.md"), b"cursor").unwrap();
 
     let mut exclude = std::collections::HashSet::new();
     exclude.insert(super::managed_target_key(
@@ -67,6 +68,117 @@ fn excludes_managed_skill_targets() {
 
     let plan = build_onboarding_plan_in_home(home.path(), None, Some(&exclude)).unwrap();
     assert_eq!(plan.total_skills_found, 0);
+}
+
+#[test]
+fn ignores_directories_without_skill_markdown() {
+    let home = tempfile::tempdir().unwrap();
+    fs::create_dir_all(home.path().join(".cursor/skills/valid")).unwrap();
+    fs::write(home.path().join(".cursor/skills/valid/SKILL.md"), "# Valid").unwrap();
+    fs::create_dir_all(home.path().join(".cursor/skills/not-a-skill")).unwrap();
+    fs::write(
+        home.path().join(".cursor/skills/not-a-skill/readme.md"),
+        "not a skill",
+    )
+    .unwrap();
+
+    let plan = build_onboarding_plan_in_home(home.path(), None, None).unwrap();
+    assert_eq!(plan.total_skills_found, 1);
+    assert_eq!(plan.groups[0].name, "valid");
+}
+
+#[test]
+fn skips_disabled_scan_directory() {
+    let home = tempfile::tempdir().unwrap();
+    fs::create_dir_all(home.path().join(".cursor/skills/cursor-skill")).unwrap();
+    fs::write(
+        home.path().join(".cursor/skills/cursor-skill/SKILL.md"),
+        "# Cursor",
+    )
+    .unwrap();
+    fs::create_dir_all(home.path().join(".codex/skills/codex-skill")).unwrap();
+    fs::write(
+        home.path().join(".codex/skills/codex-skill/SKILL.md"),
+        "# Codex",
+    )
+    .unwrap();
+
+    let disabled = [super::tool_scan_source_key(".cursor/skills")]
+        .into_iter()
+        .collect();
+    let plan = super::build_onboarding_plan_with_claude_dir(
+        home.path(),
+        &home.path().join(".claude"),
+        None,
+        None,
+        &disabled,
+    )
+    .unwrap();
+
+    assert_eq!(plan.total_tools_scanned, 1);
+    assert_eq!(plan.total_skills_found, 1);
+    assert_eq!(plan.groups[0].name, "codex-skill");
+}
+
+#[test]
+fn persists_and_sanitizes_scan_config() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = crate::core::skill_store::SkillStore::new(dir.path().join("test.db"));
+    store.ensure_schema().unwrap();
+    let cursor_key = super::tool_scan_source_key(".cursor/skills");
+
+    let saved = super::save_discovery_scan_config(
+        &store,
+        super::DiscoveryScanConfig {
+            disabled_source_keys: vec![
+                cursor_key.clone(),
+                cursor_key.clone(),
+                "unknown".to_string(),
+                super::CLAUDE_PLUGIN_SOURCE_KEY.to_string(),
+            ],
+        },
+    )
+    .unwrap();
+
+    assert_eq!(
+        saved.disabled_source_keys,
+        vec![cursor_key, super::CLAUDE_PLUGIN_SOURCE_KEY.to_string()]
+    );
+    assert_eq!(super::load_discovery_scan_config(&store).unwrap(), saved);
+}
+
+#[test]
+fn scan_settings_deduplicate_shared_dirs_and_include_claude_plugins() {
+    let home = tempfile::tempdir().unwrap();
+    fs::create_dir_all(home.path().join(".config/agents")).unwrap();
+    fs::create_dir_all(home.path().join(".claude/plugins")).unwrap();
+    let shared_key = super::tool_scan_source_key(".config/agents/skills");
+
+    let settings = super::get_discovery_scan_settings_in_home(
+        home.path(),
+        &home.path().join(".claude"),
+        super::DiscoveryScanConfig {
+            disabled_source_keys: vec![shared_key.clone()],
+        },
+    );
+
+    let shared = settings
+        .sources
+        .iter()
+        .find(|source| source.key == shared_key)
+        .unwrap();
+    assert_eq!(shared.path, home.path().join(".config/agents/skills"));
+    assert!(shared.label.contains("Amp"));
+    assert!(shared.label.contains("Kimi Code CLI"));
+    assert!(!shared.enabled);
+    assert_eq!(
+        settings
+            .sources
+            .iter()
+            .filter(|source| source.key == super::CLAUDE_PLUGIN_SOURCE_KEY)
+            .count(),
+        1
+    );
 }
 
 #[test]

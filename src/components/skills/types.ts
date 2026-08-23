@@ -120,6 +120,18 @@ export type ToolConfigDto = {
   custom_tools: CustomToolConfigDto[]
 }
 
+export type DiscoveryScanSourceDto = {
+  key: string
+  label: string
+  path: string
+  enabled: boolean
+}
+
+export type DiscoveryScanSettingsDto = {
+  sources: DiscoveryScanSourceDto[]
+  disabled_source_keys: string[]
+}
+
 export type UpdateResultDto = {
   skill_id: string
   name: string

@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-08-23
+
+### Added
+- **DeepSeek Harness tool adapter**: Added global and project-level Skill sync through `~/.dsh/skills` and `.dsh/skills`. Skills Hub detects a default DeepSeek Harness installation through `~/.dsh` and displays the DeepSeek product icon throughout tool management and sync flows.
+- **Discovery scan settings**: Added persistent per-directory scan source controls with a permanent Settings entry and a contextual shortcut beside discovered Skills. Saving refreshes discovery results without changing managed or synced Skills.
+
+### Changed
+- **Built-in tool catalog**: Increased the built-in adapter count to 47 and documented DeepSeek Harness path rules in the English and Chinese support matrices.
+- **Discovery validation**: Tool directories are now reported as importable Skills only when they contain a `SKILL.md` file, reducing unrelated discovery results.
+
 ## [0.8.1] - 2026-08-06
 
 ### Fixed

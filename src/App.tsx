@@ -26,6 +26,7 @@ import BulkDeleteModal from './components/skills/modals/BulkDeleteModal'
 import BulkSyncModal from './components/skills/modals/BulkSyncModal'
 import BulkTagsModal from './components/skills/modals/BulkTagsModal'
 import DeleteModal from './components/skills/modals/DeleteModal'
+import DiscoveryScanModal from './components/skills/modals/DiscoveryScanModal'
 import EditSkillTagsModal from './components/skills/modals/EditSkillTagsModal'
 import GitPickModal from './components/skills/modals/GitPickModal'
 import LocalPickModal from './components/skills/modals/LocalPickModal'
@@ -54,6 +55,7 @@ import {
 } from './components/skills/installScope'
 import type {
   AutoUpdateConfigDto,
+  DiscoveryScanSettingsDto,
   FeaturedSkillDto,
   GitSkillCandidate,
   GithubProxyConfigDto,
@@ -141,6 +143,10 @@ function App() {
   const [loadingStartAt, setLoadingStartAt] = useState<number | null>(null)
   const [toolStatus, setToolStatus] = useState<ToolStatusDto | null>(null)
   const [toolConfig, setToolConfig] = useState<ToolConfigDto | null>(null)
+  const [discoveryScanSettings, setDiscoveryScanSettings] =
+    useState<DiscoveryScanSettingsDto | null>(null)
+  const [showDiscoveryScanModal, setShowDiscoveryScanModal] = useState(false)
+  const [discoveryScanSaving, setDiscoveryScanSaving] = useState(false)
   const [showNewToolsModal, setShowNewToolsModal] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
@@ -386,6 +392,20 @@ function App() {
     }
   }, [invokeTauri])
 
+  const loadDiscoveryScanSettings = useCallback(async () => {
+    if (!isTauri) return null
+    try {
+      const result = await invokeTauri<DiscoveryScanSettingsDto>(
+        'get_discovery_scan_settings',
+      )
+      setDiscoveryScanSettings(result)
+      return result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+      return null
+    }
+  }, [invokeTauri, isTauri])
+
   const loadManagedSkills = useCallback(async () => {
     try {
       const result = await invokeTauri<ManagedSkill[]>('get_managed_skills')
@@ -555,6 +575,10 @@ function App() {
         setError(err instanceof Error ? err.message : String(err))
       })
   }, [isTauri, invokeTauri])
+
+  useEffect(() => {
+    void loadDiscoveryScanSettings()
+  }, [loadDiscoveryScanSettings])
 
   useEffect(() => {
     if (isTauri) {
@@ -1309,6 +1333,39 @@ function App() {
     setShowAddModal(false)
     setActiveView('settings')
   }, [])
+
+  const handleOpenDiscoveryScanSettings = useCallback(() => {
+    setShowDiscoveryScanModal(true)
+    void loadDiscoveryScanSettings()
+  }, [loadDiscoveryScanSettings])
+
+  const handleCloseDiscoveryScanSettings = useCallback(() => {
+    if (!discoveryScanSaving) setShowDiscoveryScanModal(false)
+  }, [discoveryScanSaving])
+
+  const handleSaveDiscoveryScanSettings = useCallback(
+    async (disabledSourceKeys: string[]) => {
+      if (!isTauri) return
+      setDiscoveryScanSaving(true)
+      try {
+        const saved = await invokeTauri<DiscoveryScanSettingsDto>(
+          'set_discovery_scan_config',
+          {
+            config: { disabled_source_keys: disabledSourceKeys },
+          },
+        )
+        setDiscoveryScanSettings(saved)
+        await loadPlan(false)
+        setShowDiscoveryScanModal(false)
+        toast.success(t('discoveryScan.saved'), { duration: 1600 })
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err))
+      } finally {
+        setDiscoveryScanSaving(false)
+      }
+    },
+    [invokeTauri, isTauri, loadPlan, t],
+  )
 
   const loadFeaturedSkills = useCallback(async () => {
     if (featuredSkills.length > 0) return
@@ -3470,6 +3527,7 @@ function App() {
               getSkillSourceLabel={getSkillSourceLabel}
               formatRelative={formatRelative}
               onReviewImport={handleReviewImport}
+              onOpenScanSettings={handleOpenDiscoveryScanSettings}
               onUpdateSkill={handleUpdateSkill}
               onDeleteSkill={handleDeletePrompt}
               onToggleSkillEnabled={handleToggleSkillEnabled}
@@ -3628,6 +3686,11 @@ function App() {
             onGithubTokenChange={handleGithubTokenChange}
             githubProxyConfig={githubProxyConfig}
             onGithubProxyConfigChange={handleGithubProxyConfigChange}
+            discoveryScanEnabledCount={
+              discoveryScanSettings?.sources.filter((source) => source.enabled).length ?? 0
+            }
+            discoveryScanSourceCount={discoveryScanSettings?.sources.length ?? 0}
+            onOpenDiscoveryScanSettings={handleOpenDiscoveryScanSettings}
             onBack={handleCloseSettings}
             t={t}
           />
@@ -3741,6 +3804,15 @@ function App() {
           t={t}
         />
       ) : null}
+
+      <DiscoveryScanModal
+        open={showDiscoveryScanModal}
+        saving={discoveryScanSaving}
+        settings={discoveryScanSettings}
+        onRequestClose={handleCloseDiscoveryScanSettings}
+        onSave={handleSaveDiscoveryScanSettings}
+        t={t}
+      />
 
       <SharedDirModal
         open={Boolean(pendingSharedToggle)}

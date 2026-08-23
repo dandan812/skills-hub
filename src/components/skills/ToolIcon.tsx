@@ -7,6 +7,7 @@ import codeBuddyLogo from '@lobehub/icons-static-svg/icons/codebuddy-color.svg'
 import codexLogo from '@lobehub/icons-static-svg/icons/codex-color.svg'
 import copilotLogo from '@lobehub/icons-static-svg/icons/copilot-color.svg'
 import cursorLogo from '@lobehub/icons-static-svg/icons/cursor.svg'
+import deepSeekLogo from '@lobehub/icons-static-svg/icons/deepseek-color.svg'
 import geminiCliLogo from '@lobehub/icons-static-svg/icons/geminicli-color.svg'
 import gooseLogo from '@lobehub/icons-static-svg/icons/goose.svg'
 import hermesAgentLogo from '@lobehub/icons-static-svg/icons/hermesagent.svg'
@@ -44,6 +45,7 @@ const logoByToolKey: Record<string, string> = {
   gemini_cli: geminiCliLogo,
   github_copilot: copilotLogo,
   cursor: cursorLogo,
+  deepseek_harness: deepSeekLogo,
   goose: gooseLogo,
   hermes_agent: hermesAgentLogo,
   junie: junieLogo,

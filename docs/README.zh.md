@@ -21,12 +21,15 @@ Skills Hub 的做法是：把 Skill 统一安装到中心仓库，再按你的�
 - **自动更新**：定时更新 Git 和本地来源的 Skill，并查看失败原因。
 - **详情查看**：浏览 Skill 文件树、Markdown 内容和代码片段。
 - **迁移接管**：扫描并导入本机已有 Skills，统一纳入管理。
+- **发现控制**：选择哪些已安装工具目录参与可导入 Skill 扫描。
 
 ## 界面预览
 
 ### My Skills — 托管技能与批量管理
 
 My Skills 通过卡片和列表两种视图展示已托管 Skill 的来源、标签、同步范围、目标工具和启用状态。顶部可以筛选范围、排序、按标签筛选、搜索或执行批量操作。
+
+Skills Hub 在已安装工具目录中发现可导入 Skill 后，会显示发现提示。用户可以查看并导入，或打开“扫描设置”按实际目录控制扫描来源；该设置与同步目标相互独立、重启后保留，并可随时从设置页重新打开。只有包含 `SKILL.md` 的目录会作为可导入 Skill 展示。
 
 ![My Skills 卡片视图](./assets/my-skills-card-view.png)
 
@@ -72,13 +75,14 @@ Explore 汇总精选仓库中的 Skill，并支持在线搜索。点击 Install 
 
 ## 支持的 AI 编程工具
 
-当前内置 46 个工具适配，并支持通过管理中心添加自定义工具目录。项目级 skills 目录相对所选项目根目录；标记为“不支持”的工具尚未确认项目级 skills 目录，仅支持全局同步。
+当前内置 47 个工具适配，并支持通过管理中心添加自定义工具目录。项目级 skills 目录相对所选项目根目录；标记为“不支持”的工具尚未确认项目级 skills 目录，仅支持全局同步。
 
 | tool key | 工具 | 全局 skills 目录（相对 `~`） | 项目级 skills 目录（相对项目根目录） | 存在即视为已安装（相对 `~`） |
 | --- | --- | --- | --- | --- |
 | `cursor` | Cursor | `.cursor/skills` | `.agents/skills` | `.cursor` |
 | `claude_code` | Claude Code | `.claude/skills` | `.claude/skills` | `.claude` |
 | `codex` | Codex | `.codex/skills` | `.agents/skills` | `.codex` |
+| `deepseek_harness` | DeepSeek Harness | `.dsh/skills` | `.dsh/skills` | `.dsh` |
 | `opencode` | OpenCode | `.config/opencode/skills` | `.agents/skills` | `.config/opencode` |
 | `antigravity` | Antigravity | `.gemini/config/skills` | `.agents/skills` | `.gemini/config` |
 | `amp` | Amp | `.config/agents/skills` | `.agents/skills` | `.config/agents` |
