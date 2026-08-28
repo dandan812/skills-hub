@@ -34,6 +34,25 @@ pub fn install_local_skill<R: tauri::Runtime>(
     source_path: &Path,
     name: Option<String>,
 ) -> Result<InstallResult> {
+    install_local_skill_with_existing_policy(app, store, source_path, name, false)
+}
+
+pub fn import_existing_local_skill<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    store: &SkillStore,
+    source_path: &Path,
+    name: Option<String>,
+) -> Result<InstallResult> {
+    install_local_skill_with_existing_policy(app, store, source_path, name, true)
+}
+
+fn install_local_skill_with_existing_policy<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    store: &SkillStore,
+    source_path: &Path,
+    name: Option<String>,
+    reuse_identical_existing: bool,
+) -> Result<InstallResult> {
     if !source_path.exists() {
         anyhow::bail!("source path not found: {:?}", source_path);
     }
@@ -50,6 +69,26 @@ pub fn install_local_skill<R: tauri::Runtime>(
     let central_path = central_dir.join(&name);
 
     if central_path.exists() {
+        if reuse_identical_existing {
+            let existing = store
+                .list_skills()?
+                .into_iter()
+                .find(|skill| Path::new(&skill.central_path) == central_path);
+            let source_hash = hash_dir(source_path).ok();
+            let central_hash = hash_dir(&central_path).ok();
+            if let (Some(record), Some(src_hash), Some(dst_hash)) =
+                (existing, source_hash, central_hash)
+            {
+                if src_hash == dst_hash {
+                    return Ok(InstallResult {
+                        skill_id: record.id,
+                        name: record.name,
+                        central_path,
+                        content_hash: record.content_hash,
+                    });
+                }
+            }
+        }
         anyhow::bail!("skill already exists in central repo: {:?}", central_path);
     }
 

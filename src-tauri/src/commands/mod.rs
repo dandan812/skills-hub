@@ -23,8 +23,8 @@ use crate::core::content_hash::hash_dir;
 use crate::core::featured_skills::{fetch_featured_skills, FeaturedSkill};
 use crate::core::github_search::{search_github_repos, RepoSummary};
 use crate::core::installer::{
-    install_git_skill, install_git_skill_from_selection, install_local_skill,
-    install_local_skill_from_selection, list_git_skills, list_local_skills,
+    import_existing_local_skill, install_git_skill, install_git_skill_from_selection,
+    install_local_skill, install_local_skill_from_selection, list_git_skills, list_local_skills,
     update_managed_skill_from_source, GitSkillCandidate, InstallResult, LocalSkillCandidate,
 };
 use crate::core::network_proxy::{
@@ -1416,7 +1416,7 @@ pub async fn import_existing_skill(
         if !source.join("SKILL.md").exists() {
             anyhow::bail!("SKILL_INVALID|missing_skill_md");
         }
-        let result = install_local_skill(&app, &store, source, name)?;
+        let result = import_existing_local_skill(&app, &store, source, name)?;
         Ok::<_, anyhow::Error>(to_install_dto(result))
     })
     .await
@@ -1605,25 +1605,34 @@ pub async fn delete_managed_skill(
 
 fn remove_path_any(path: &str) -> Result<(), String> {
     let p = std::path::Path::new(path);
-    if !p.exists() {
-        return Ok(());
-    }
-
-    let meta = std::fs::symlink_metadata(p).map_err(|err| err.to_string())?;
+    // 用 symlink_metadata 而非 exists()：悬空链接（目标已删）也要清理掉
+    let meta = match std::fs::symlink_metadata(p) {
+        Ok(meta) => meta,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(err) => return Err(format!("{path}: {err}")),
+    };
     let ft = meta.file_type();
 
-    // 软链接（即使指向目录）也应该用 remove_file 删除链接本身
+    // 删除链接本身：Windows junction 虽然 is_symlink()==true，但它是目录型
+    // reparse point，remove_file（DeleteFileW）会报 os error 5，必须先试
+    // remove_dir（RemoveDirectoryW 只移除链接，不会穿透到目标）
     if ft.is_symlink() {
-        std::fs::remove_file(p).map_err(|err| err.to_string())?;
+        #[cfg(windows)]
+        {
+            if std::fs::remove_dir(p).is_ok() {
+                return Ok(());
+            }
+        }
+        std::fs::remove_file(p).map_err(|err| format!("{path}: {err}"))?;
         return Ok(());
     }
 
     if ft.is_dir() {
-        std::fs::remove_dir_all(p).map_err(|err| err.to_string())?;
+        std::fs::remove_dir_all(p).map_err(|err| format!("{path}: {err}"))?;
         return Ok(());
     }
 
-    std::fs::remove_file(p).map_err(|err| err.to_string())?;
+    std::fs::remove_file(p).map_err(|err| format!("{path}: {err}"))?;
     Ok(())
 }
 
