@@ -16,6 +16,53 @@ fn set_central_path(store: &SkillStore, central: &Path) {
         .unwrap();
 }
 
+#[test]
+fn record_target_sync_failure_preserves_target_and_sets_error() {
+    let (_dir, store) = make_store();
+    let skill = SkillRecord {
+        id: "s1".to_string(),
+        name: "S1".to_string(),
+        description: None,
+        source_type: "local".to_string(),
+        source_ref: Some("/tmp/src".to_string()),
+        source_subpath: None,
+        source_revision: None,
+        central_path: "/tmp/central".to_string(),
+        content_hash: None,
+        created_at: 1,
+        updated_at: 1,
+        last_sync_at: None,
+        last_seen_at: 1,
+        enabled: true,
+        status: "ok".to_string(),
+    };
+    store.upsert_skill(&skill).unwrap();
+    let target = SkillTargetRecord {
+        id: "t1".to_string(),
+        skill_id: skill.id,
+        tool: "cursor".to_string(),
+        scope: "global".to_string(),
+        project_path: None,
+        target_path: "/tmp/target".to_string(),
+        mode: "copy".to_string(),
+        status: "ok".to_string(),
+        last_error: None,
+        synced_at: Some(123),
+    };
+    store.upsert_skill_target(&target).unwrap();
+
+    super::record_target_sync_failure(&store, &target, "copy failed").unwrap();
+
+    let failed = store
+        .get_skill_target("s1", "cursor", "global", None)
+        .unwrap()
+        .unwrap();
+    assert_eq!(failed.status, "error");
+    assert_eq!(failed.last_error.as_deref(), Some("copy failed"));
+    assert_eq!(failed.target_path, "/tmp/target");
+    assert_eq!(failed.synced_at, Some(123));
+}
+
 fn init_git_repo(dir: &Path) -> git2::Repository {
     let repo = git2::Repository::init(dir).unwrap();
     let sig = git2::Signature::now("t", "t@example.com").unwrap();
@@ -288,6 +335,81 @@ fn installs_local_skill_and_updates_from_source() {
         Err(e) => e,
     };
     assert!(format!("{:#}", err).contains("skill already exists"));
+}
+
+#[test]
+fn failed_update_marks_skill_error_and_success_clears_it() {
+    let app = tauri::test::mock_app();
+    let (dir, store) = make_store();
+    let central = dir.path().join("central");
+    fs::create_dir_all(&central).unwrap();
+    fs::write(central.join("SKILL.md"), b"---\nname: x\n---\n").unwrap();
+    let source = dir.path().join("missing-source");
+    let skill = SkillRecord {
+        id: "source-status".to_string(),
+        name: "Source Status".to_string(),
+        description: None,
+        source_type: "local".to_string(),
+        source_ref: Some(source.to_string_lossy().to_string()),
+        source_subpath: None,
+        source_revision: None,
+        central_path: central.to_string_lossy().to_string(),
+        content_hash: None,
+        created_at: 1,
+        updated_at: 1,
+        last_sync_at: None,
+        last_seen_at: 1,
+        enabled: true,
+        status: "ok".to_string(),
+    };
+    store.upsert_skill(&skill).unwrap();
+
+    let error = match super::update_managed_skill_from_source(app.handle(), &store, &skill.id) {
+        Ok(_) => panic!("expected source update failure"),
+        Err(err) => err.to_string(),
+    };
+    assert!(error.contains("source path not found"));
+    assert_eq!(
+        store.get_skill_by_id(&skill.id).unwrap().unwrap().status,
+        "error"
+    );
+
+    fs::create_dir_all(&source).unwrap();
+    fs::write(source.join("SKILL.md"), b"---\nname: x\n---\n").unwrap();
+    super::update_managed_skill_from_source(app.handle(), &store, &skill.id).unwrap();
+    assert_eq!(
+        store.get_skill_by_id(&skill.id).unwrap().unwrap().status,
+        "ok"
+    );
+
+    let blocked_parent = dir.path().join("blocked-parent");
+    fs::write(&blocked_parent, b"not a directory").unwrap();
+    let target = SkillTargetRecord {
+        id: "blocked-target".to_string(),
+        skill_id: skill.id.clone(),
+        tool: "unknown_tool".to_string(),
+        scope: "global".to_string(),
+        project_path: None,
+        target_path: blocked_parent.join("target").to_string_lossy().to_string(),
+        mode: "copy".to_string(),
+        status: "ok".to_string(),
+        last_error: None,
+        synced_at: None,
+    };
+    store.upsert_skill_target(&target).unwrap();
+    assert!(super::update_managed_skill_from_source(app.handle(), &store, &skill.id).is_err());
+    assert_eq!(
+        store.get_skill_by_id(&skill.id).unwrap().unwrap().status,
+        "ok"
+    );
+    assert_eq!(
+        store
+            .get_skill_target(&skill.id, "unknown_tool", "global", None)
+            .unwrap()
+            .unwrap()
+            .status,
+        "error"
+    );
 }
 
 #[test]

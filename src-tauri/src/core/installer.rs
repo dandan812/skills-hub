@@ -15,7 +15,7 @@ use super::github_download::{
     download_github_directory, parse_github_api_params, GithubDownloadOptions,
 };
 use super::network_proxy::get_github_proxy_url;
-use super::skill_store::{SkillRecord, SkillStore};
+use super::skill_store::{SkillRecord, SkillStore, SkillTargetRecord};
 use super::sync_engine::copy_dir_recursive;
 use super::sync_engine::sync_dir_copy_with_overwrite;
 use super::tool_adapters::adapter_by_key;
@@ -26,6 +26,17 @@ pub struct InstallResult {
     pub name: String,
     pub central_path: PathBuf,
     pub content_hash: Option<String>,
+}
+
+fn record_target_sync_failure(
+    store: &SkillStore,
+    target: &SkillTargetRecord,
+    error: &str,
+) -> Result<()> {
+    let mut failed_target = target.clone();
+    failed_target.status = "error".to_string();
+    failed_target.last_error = Some(error.to_string());
+    store.upsert_skill_target(&failed_target)
 }
 
 pub fn install_local_skill<R: tauri::Runtime>(
@@ -689,6 +700,25 @@ pub fn update_managed_skill_from_source<R: tauri::Runtime>(
     store: &SkillStore,
     skill_id: &str,
 ) -> Result<UpdateResult> {
+    let mut source_updated = false;
+    let result = update_managed_skill_from_source_inner(app, store, skill_id, &mut source_updated);
+    if result.is_err() && !source_updated {
+        if let Ok(Some(mut skill)) = store.get_skill_by_id(skill_id) {
+            skill.status = "error".to_string();
+            if let Err(err) = store.upsert_skill(&skill) {
+                eprintln!("[update] failed to persist Skill error status: {err:#}");
+            }
+        }
+    }
+    result
+}
+
+fn update_managed_skill_from_source_inner<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    store: &SkillStore,
+    skill_id: &str,
+    source_updated: &mut bool,
+) -> Result<UpdateResult> {
     let record = store
         .get_skill_by_id(skill_id)?
         .ok_or_else(|| anyhow::anyhow!("skill not found"))?;
@@ -835,6 +865,7 @@ pub fn update_managed_skill_from_source<R: tauri::Runtime>(
         status: "ok".to_string(),
     };
     store.upsert_skill(&updated)?;
+    *source_updated = true;
 
     // If any targets are "copy", re-sync them so changes propagate. Symlinks update automatically.
     // Cursor 目前不支持软链/junction，因此无论历史 mode 如何，都需要强制 copy 回灌。
@@ -855,7 +886,13 @@ pub fn update_managed_skill_from_source<R: tauri::Runtime>(
         let force_copy = t.mode == "copy" || t.tool == "cursor";
         if force_copy {
             let target_path = PathBuf::from(&t.target_path);
-            let sync_res = sync_dir_copy_with_overwrite(&central_path, &target_path, true)?;
+            let sync_res = match sync_dir_copy_with_overwrite(&central_path, &target_path, true) {
+                Ok(result) => result,
+                Err(err) => {
+                    record_target_sync_failure(store, &t, &format!("{err:#}"))?;
+                    return Err(err);
+                }
+            };
             let record = super::skill_store::SkillTargetRecord {
                 id: t.id.clone(),
                 skill_id: t.skill_id.clone(),
