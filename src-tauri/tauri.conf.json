@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Skills Hub",
-  "version": "0.9.1",
-  "identifier": "com.qufei1993.skillshub",
+  "productName": "Skills Hub Custom",
+  "version": "0.9.1-custom.1",
+  "identifier": "com.dandan812.skillshubcustom",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Skills Hub",
+        "title": "Skills Hub Custom",
         "width": 1180,
         "height": 760,
         "minWidth": 900,
@@ -31,7 +31,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "createUpdaterArtifacts": true,
+    "createUpdaterArtifacts": false,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -42,12 +42,10 @@
   },
   "plugins": {
     "updater": {
-      "active": true,
+      "active": false,
       "dialog": false,
-      "endpoints": [
-        "https://github.com/qufei1993/skills-hub/releases/latest/download/updater.json"
-      ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI1QjEyQ0U0RkM5NjZCMjQKUldRa2E1Yjg1Q3l4dFM0TGl4N3k3KytFalRiajhFZmo4QkE5ek5HVXM1MjRDZWVORWhibnR6Vk8K"
+      "endpoints": [],
+      "pubkey": ""
     }
   }
 }

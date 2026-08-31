@@ -1,5 +1,6 @@
 mod commands;
 mod core;
+pub mod runtime_evidence;
 
 use std::sync::Arc;
 
@@ -113,6 +114,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            runtime_evidence::commands::get_runtime_evidence_status,
             commands::get_central_repo_path,
             commands::set_central_repo_path,
             commands::get_recent_projects,

@@ -39,6 +39,7 @@ import SettingsPage from './components/skills/SettingsPage'
 import ToolsPage from './components/skills/ToolsPage'
 import UpdatesPage from './components/skills/UpdatesPage'
 import WindowResizeHandles from './components/WindowResizeHandles'
+import RuntimeEvidencePage from './features/runtime-evidence/RuntimeEvidencePage'
 import {
   getAutoUpdateToastKey,
   shouldKeepWaitingForTriggeredAutoUpdate,
@@ -86,7 +87,7 @@ type SkillScopeState = Record<
   }
 >
 
-type ActiveView = 'myskills' | 'explore' | 'detail' | 'settings' | 'manage'
+type ActiveView = 'myskills' | 'explore' | 'detail' | 'settings' | 'manage' | 'runtime'
 type ManagementTab = 'tags' | 'tools' | 'updates'
 type UpdaterProxyOptions = { proxy?: string }
 type UpdaterDownloadOptions = DownloadOptions & UpdaterProxyOptions
@@ -1408,7 +1409,7 @@ function App() {
   }, [featuredSkills.length, invokeTauri])
 
   const handleViewChange = useCallback(
-    (view: 'myskills' | 'explore' | 'manage') => {
+    (view: 'myskills' | 'explore' | 'manage' | 'runtime') => {
       setShowAddModal(false)
       setActiveView(view)
       if (view !== 'myskills') {
@@ -3692,6 +3693,12 @@ function App() {
               </div>
             ) : null}
           </div>
+        ) : activeView === 'runtime' ? (
+          <RuntimeEvidencePage
+            isTauri={isTauri}
+            invokeTauri={invokeTauri}
+            t={t}
+          />
         ) : activeView === 'manage' ? (
           <div className="management-page">
             <div className="management-header">

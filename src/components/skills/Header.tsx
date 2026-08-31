@@ -1,6 +1,7 @@
 import { memo, type PointerEvent } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import {
+  Activity,
   ChevronLeft,
   Compass,
   Download,
@@ -16,7 +17,7 @@ import type { TFunction } from 'i18next'
 type ManagementTab = 'tags' | 'tools' | 'updates'
 
 type HeaderProps = {
-  activeView: 'myskills' | 'explore' | 'detail' | 'settings' | 'manage'
+  activeView: 'myskills' | 'explore' | 'detail' | 'settings' | 'manage' | 'runtime'
   managementTab: ManagementTab
   skillCount: number
   tagCount: number
@@ -32,7 +33,7 @@ type HeaderProps = {
   onOpenSettings: () => void
   onOpenUpdate: () => void
   onRestart: () => void
-  onViewChange: (view: 'myskills' | 'explore' | 'manage') => void
+  onViewChange: (view: 'myskills' | 'explore' | 'manage' | 'runtime') => void
   onManagementTabChange: (tab: ManagementTab) => void
   t: TFunction
 }
@@ -169,6 +170,15 @@ const Header = ({
         >
           <Compass size={18} />
           <span>{t('addSkills')}</span>
+        </button>
+        <button
+          className={activeView === 'runtime' ? 'active' : ''}
+          type="button"
+          onClick={() => onViewChange('runtime')}
+          title={collapsed ? t('navRuntimeEvidence') : undefined}
+        >
+          <Activity size={18} />
+          <span>{t('navRuntimeEvidence')}</span>
         </button>
       </nav>
 

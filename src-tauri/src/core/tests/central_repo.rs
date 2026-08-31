@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::core::central_repo::{ensure_central_repo, resolve_central_repo_path};
+use crate::core::central_repo::{ensure_central_repo, resolve_central_repo_path, CENTRAL_DIR_NAME};
 use crate::core::skill_store::SkillStore;
 
 fn make_store() -> (tempfile::TempDir, SkillStore) {
@@ -8,6 +8,11 @@ fn make_store() -> (tempfile::TempDir, SkillStore) {
     let store = SkillStore::new(dir.path().join("test.db"));
     store.ensure_schema().expect("ensure_schema");
     (dir, store)
+}
+
+#[test]
+fn custom_build_uses_isolated_default_directory() {
+    assert_eq!(CENTRAL_DIR_NAME, ".skillshub-custom");
 }
 
 #[test]

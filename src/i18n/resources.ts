@@ -1,7 +1,7 @@
 export const resources = {
   en: {
     translation: {
-      appName: 'Skills Hub',
+      appName: 'Skills Hub Custom',
       unknown: 'unknown',
       languageShort: {
         en: 'EN',
@@ -48,6 +48,31 @@ export const resources = {
       navTags: 'Tags',
       navTools: 'Tools',
       navManageCenter: 'Manage',
+      navRuntimeEvidence: 'Runtime',
+      runtimeEvidence: {
+        title: 'Runtime evidence',
+        subtitle: 'Session-level Skill observations',
+        refresh: 'Refresh',
+        loading: 'Reading runtime evidence status...',
+        unavailable: 'Runtime status is available only in the desktop app.',
+        error: 'Runtime status could not be read',
+        collector: 'Collector',
+        contract: 'Event contract',
+        eventChannel: 'Event channel',
+        lastEvent: 'Last observed event',
+        never: 'No event observed',
+        unknownDetail: 'Loaded and recently called states remain unknown.',
+        observedDetail: 'At least one runtime event has been observed.',
+        states: {
+          notConfigured: 'Collector not configured',
+          observed: 'Runtime evidence observed',
+          unknown: 'Runtime state unknown',
+        },
+        collectors: {
+          not_configured: 'Not configured',
+          ready: 'Ready',
+        },
+      },
       newSkill: 'New Skill',
       manualAdd: 'Manual',
       manualAddHint: 'Have a Git URL or local path? Click <b>Manual</b> to add directly',
@@ -711,7 +736,7 @@ export const resources = {
   },
   zh: {
     translation: {
-      appName: 'Skills Hub',
+      appName: 'Skills Hub Custom',
       unknown: '未知',
       languageShort: {
         en: 'EN',
@@ -758,6 +783,31 @@ export const resources = {
       navTags: '标签',
       navTools: '工具',
       navManageCenter: '管理中心',
+      navRuntimeEvidence: '运行证据',
+      runtimeEvidence: {
+        title: '运行时证据',
+        subtitle: '会话级 Skill 观测状态',
+        refresh: '刷新',
+        loading: '正在读取运行时证据状态...',
+        unavailable: '运行状态仅可在桌面应用中读取。',
+        error: '无法读取运行状态',
+        collector: '采集器',
+        contract: '事件契约',
+        eventChannel: '事件通道',
+        lastEvent: '最近观测事件',
+        never: '尚未观测到事件',
+        unknownDetail: '已加载和最近调用状态仍为未知。',
+        observedDetail: '已经观测到至少一个运行时事件。',
+        states: {
+          notConfigured: '采集器未配置',
+          observed: '已观测到运行证据',
+          unknown: '运行状态未知',
+        },
+        collectors: {
+          not_configured: '未配置',
+          ready: '已就绪',
+        },
+      },
       newSkill: '新建 Skill',
       manualAdd: '手动添加',
       manualAddHint: '有 Git URL 或本地路径？点击<b>手动添加</b>直接导入',

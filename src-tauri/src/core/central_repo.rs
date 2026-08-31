@@ -6,7 +6,7 @@ use tauri::Manager;
 
 use super::skill_store::SkillStore;
 
-const CENTRAL_DIR_NAME: &str = ".skillshub";
+const CENTRAL_DIR_NAME: &str = ".skillshub-custom";
 
 pub fn resolve_central_repo_path<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
