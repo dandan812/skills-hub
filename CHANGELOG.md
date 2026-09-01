@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.9.1-custom.2] - 2026-09-01
+
+### Fixed
+- **Self-owned updater signing-key rotation**: Replaced the undecryptable updater signing key, restoring signed Windows and macOS artifacts, releases, and in-app update verification.
+
 ## [0.9.1] - 2026-08-29
 
 ### Changed

@@ -26,7 +26,7 @@ repository `~/.skillshub-custom`. Its official application updater is disabled.
 Do not run official and custom builds against the same central repository.
 
 Custom releases use `<upstream-version>-custom.<revision>`, starting with
-`0.9.1-custom.1`. Keep `package.json`, `tauri.conf.json`, and `Cargo.toml` in
+`0.9.1-custom.2`. Keep `package.json`, `tauri.conf.json`, and `Cargo.toml` in
 sync with `npm run version:set -- <version>`.
 
 ## Runtime extension boundary
@@ -100,7 +100,7 @@ Commit that public configuration. In the fork's GitHub Actions secrets, set
 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` when the key has a password. Never commit
 either value.
 
-Push a matching custom tag, for example `v0.9.1-custom.1`, to publish a signed
+Push a matching custom tag, for example `v0.9.1-custom.2`, to publish a signed
 GitHub Release and its `updater.json`. The release workflow rejects ordinary
 upstream tags, unsigned builds, mismatched versions, and disabled updater
 configuration before it starts platform builds. Custom releases are published

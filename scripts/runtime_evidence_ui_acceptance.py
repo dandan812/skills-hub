@@ -36,7 +36,7 @@ MOCK_TAURI = r"""
   };
   const invoke = async (cmd, args = {}) => {
     calls.push({ cmd, args });
-    if (cmd === "plugin:app|version") return "0.9.1-custom.1";
+    if (cmd === "plugin:app|version") return "0.9.1-custom.2";
     if (cmd === "plugin:updater|check") return null;
     if (cmd === "get_managed_skills" || cmd === "get_tags" || cmd === "get_recent_projects") return [];
     if (cmd === "get_central_repo_path") return "C:\\Users\\demo\\.skillshub-custom";

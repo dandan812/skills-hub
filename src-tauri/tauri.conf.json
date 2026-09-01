@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Skills Hub Custom",
-  "version": "0.9.1-custom.1",
+  "version": "0.9.1-custom.2",
   "identifier": "com.dandan812.skillshubcustom",
   "build": {
     "frontendDist": "../dist",
@@ -53,7 +53,7 @@
       "endpoints": [
         "https://github.com/dandan812/skills-hub/releases/latest/download/updater.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMxMTUxNTVBN0EyNTQ3MDgKUldRSVJ5VjZXaFVWd1hnbERoR2FkYXNpUHJmMUY3ZFVYV1hIV0IxNWtiZlBDN1cwU1A4WG1CQjIK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDIxOEQ5M0Q0ODVGRDdCNTQKUldSRWUvMkYxSk9OSVJrc2NWandmZEl0VzJWSTljWmdFWmRIL0c4dGV5eDMxN0FUMHJVaFVFZGwK"
     }
   }
 }
