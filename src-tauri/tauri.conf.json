@@ -19,7 +19,10 @@
         "minHeight": 640,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "trafficLightPosition": { "x": 16, "y": 19 },
+        "trafficLightPosition": {
+          "x": 16,
+          "y": 19
+        },
         "resizable": true,
         "fullscreen": false
       }
@@ -31,8 +34,10 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "createUpdaterArtifacts": false,
-    "resources": ["resources/runtime-hooks/*"],
+    "createUpdaterArtifacts": true,
+    "resources": [
+      "resources/runtime-hooks/*"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -43,10 +48,12 @@
   },
   "plugins": {
     "updater": {
-      "active": false,
+      "active": true,
       "dialog": false,
-      "endpoints": [],
-      "pubkey": ""
+      "endpoints": [
+        "https://github.com/dandan812/skills-hub/releases/latest/download/updater.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMxMTUxNTVBN0EyNTQ3MDgKUldRSVJ5VjZXaFVWd1hnbERoR2FkYXNpUHJmMUY3ZFVYV1hIV0IxNWtiZlBDN1cwU1A4WG1CQjIK"
     }
   }
 }
