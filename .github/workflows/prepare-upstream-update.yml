@@ -1,0 +1,155 @@
+name: Prepare Upstream Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_tag:
+        description: Optional upstream tag such as v0.9.2. Leave empty for the newest stable tag.
+        required: false
+        type: string
+  schedule:
+    - cron: "24 3 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: prepare-upstream-update
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    env:
+      CUSTOM_BRANCH: custom/main
+      UPSTREAM_URL: https://github.com/qufei1993/skills-hub.git
+      REQUESTED_TAG: ${{ inputs.upstream_tag }}
+    steps:
+      - name: Checkout custom branch
+        uses: actions/checkout@v4
+        with:
+          ref: custom/main
+          fetch-depth: 0
+
+      - name: Fetch upstream release tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          git remote add upstream "$UPSTREAM_URL" 2>/dev/null || git remote set-url upstream "$UPSTREAM_URL"
+          git fetch upstream --tags --prune
+
+      - name: Choose a safe upgrade branch
+        id: target
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -n "$REQUESTED_TAG" ]; then
+            tag="$REQUESTED_TAG"
+          else
+            tag="$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)"
+          fi
+          if [ -z "$tag" ] || ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "upstream_tag must be a stable semantic tag such as v0.9.2" >&2
+            exit 1
+          fi
+          git rev-parse --verify "refs/tags/$tag^{commit}" >/dev/null
+
+          current_version="$(node -p "require('./package.json').version")"
+          current_base="${current_version%-custom.*}"
+          target_base="${tag#v}"
+          branch="automation/upstream-${tag}"
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "custom_version=${target_base}-custom.1" >> "$GITHUB_OUTPUT"
+
+          if [ "$current_base" = "$target_base" ]; then
+            echo "needs_prepare=false" >> "$GITHUB_OUTPUT"
+            echo "needs_pr=false" >> "$GITHUB_OUTPUT"
+            echo "Already based on $tag ($current_version)."
+          elif git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
+            echo "needs_prepare=false" >> "$GITHUB_OUTPUT"
+            echo "needs_pr=true" >> "$GITHUB_OUTPUT"
+            echo "Existing candidate branch $branch will not be overwritten."
+          else
+            echo "needs_prepare=true" >> "$GITHUB_OUTPUT"
+            echo "needs_pr=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install frontend dependencies
+        if: steps.target.outputs.needs_prepare == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install frontend packages
+        if: steps.target.outputs.needs_prepare == 'true'
+        run: npm ci
+
+      - name: Merge upstream without auto-resolving conflicts
+        if: steps.target.outputs.needs_prepare == 'true'
+        env:
+          TAG: ${{ steps.target.outputs.tag }}
+          BRANCH: ${{ steps.target.outputs.branch }}
+          CUSTOM_VERSION: ${{ steps.target.outputs.custom_version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --create "$BRANCH" "$CUSTOM_BRANCH"
+
+          if ! git merge --no-ff --no-edit "$TAG"; then
+            echo "::error::Upstream merge conflict. No branch was pushed; resolve the following files locally." >&2
+            git diff --name-only --diff-filter=U >&2 || true
+            exit 1
+          fi
+
+          npm run version:set -- "$CUSTOM_VERSION"
+          git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
+          git commit -m "chore(custom): prepare upstream $TAG"
+
+      - name: Verify custom boundaries and web build
+        if: steps.target.outputs.needs_prepare == 'true'
+        env:
+          TAG: ${{ steps.target.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/verify-custom-boundaries.mjs
+          npm run version:check
+          npm run lint
+          npm run build
+
+      - name: Push candidate branch
+        if: steps.target.outputs.needs_prepare == 'true'
+        env:
+          BRANCH: ${{ steps.target.outputs.branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The branch name is reserved for automation. This deliberately does not force-push.
+          git push origin "HEAD:refs/heads/$BRANCH"
+
+      - name: Create a pull request when needed
+        if: steps.target.outputs.needs_pr == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.target.outputs.tag }}
+          BRANCH: ${{ steps.target.outputs.branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          existing="$(gh pr list --head "$BRANCH" --base "$CUSTOM_BRANCH" --state open --json url --jq 'length')"
+          if [ "$existing" = "0" ]; then
+            gh pr create \
+              --base "$CUSTOM_BRANCH" \
+              --head "$BRANCH" \
+              --title "chore(custom): prepare upstream $TAG" \
+              --body "Automated candidate for upstream $TAG. Review the custom boundary check and the normal CI checks before merging."
+          else
+            echo "An open pull request already exists for $BRANCH."
+          fi

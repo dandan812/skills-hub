@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, custom/main]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -20,6 +20,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run version:check
+      - run: npm run custom:verify-boundaries
       - run: npm run lint
       - run: npm run build
 

@@ -77,6 +77,12 @@ pub fn run() {
 
             app.manage(store.clone());
             app.manage(Arc::new(CancelToken::new()));
+            let runtime_state = app
+                .path()
+                .app_local_data_dir()
+                .map(|root| runtime_evidence::RuntimeEvidenceState::from_app_local_root(&root))
+                .unwrap_or_else(|_| runtime_evidence::RuntimeEvidenceState::unavailable());
+            app.manage(runtime_state);
 
             // Backfill description for skills that were installed before V2 schema.
             core::installer::backfill_skill_descriptions(&store);
@@ -114,7 +120,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            runtime_evidence::commands::get_runtime_evidence_status,
+            runtime_evidence::commands::get_runtime_evidence_overview,
+            runtime_evidence::commands::refresh_runtime_evidence,
             commands::get_central_repo_path,
             commands::set_central_repo_path,
             commands::get_recent_projects,

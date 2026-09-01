@@ -1,30 +1,52 @@
 import { describe, expect, it } from 'vitest'
-import { hasObservedRuntimeEvidence } from './status'
-import type { RuntimeEvidenceStatus } from './types'
+import { filterRuntimeRows, findAgent, findSession, sessionKey } from './status'
+import type { RuntimeEvidenceOverview, RuntimeSkillRow } from './types'
 
-const makeStatus = (
-  overrides: Partial<RuntimeEvidenceStatus> = {},
-): RuntimeEvidenceStatus => ({
-  schema_version: 1,
-  event_name: 'runtime-evidence://event-v1',
-  collector_state: 'not_configured',
-  last_event_at_ms: null,
-  supported_event_types: ['session_started', 'skill_loaded', 'skill_called'],
-  ...overrides,
+const row = (skillId: string, skillName = skillId): RuntimeSkillRow => ({
+  skillId,
+  skillName,
+  installed: 'yes',
+  assigned: 'no',
+  loaded: 'unknown',
+  lastCall: { state: 'unknown' },
+  source: 'managementCatalog',
+  reason: 'sessionEvidenceMissing',
 })
-describe('hasObservedRuntimeEvidence', () => {
-  it('keeps runtime claims unknown while the collector is not configured', () => {
-    expect(hasObservedRuntimeEvidence(makeStatus())).toBe(false)
+
+const overview: RuntimeEvidenceOverview = {
+  schemaVersion: 1,
+  status: 'ready',
+  import: { accepted: 0, duplicate: 0, rejected: 0, reasons: [] },
+  inboxPath: 'runtime-hooks/skill-runtime-v1.jsonl',
+  eventCount: 0,
+  agents: [{
+    agentId: 'codex',
+    catalogState: 'available',
+    sessions: [{
+      sessionId: null,
+      state: 'unknown',
+      startedAt: null,
+      lastObservedAt: null,
+      skills: [row('code'), row('paper-digest', 'Paper Digest')],
+    }],
+  }],
+}
+
+describe('runtime evidence selectors', () => {
+  it('selects a fixed agent and falls back to its first session', () => {
+    const agent = findAgent(overview, 'codex')
+    const session = findSession(agent, 'missing')
+
+    expect(agent?.agentId).toBe('codex')
+    expect(session?.state).toBe('unknown')
+    expect(sessionKey(session!)).toBe('__unknown__')
   })
 
-  it('requires an observed event even when the collector is ready', () => {
-    expect(hasObservedRuntimeEvidence(makeStatus({ collector_state: 'ready' }))).toBe(false)
-  })
+  it('filters by display name or runtime Skill ID', () => {
+    const rows = overview.agents[0].sessions[0].skills
 
-  it('recognizes evidence only after a ready collector reports an event', () => {
-    expect(hasObservedRuntimeEvidence(makeStatus({
-      collector_state: 'ready',
-      last_event_at_ms: 1_725_000_000_000,
-    }))).toBe(true)
+    expect(filterRuntimeRows(rows, 'paper')).toEqual([rows[1]])
+    expect(filterRuntimeRows(rows, 'CODE')).toEqual([rows[0]])
+    expect(filterRuntimeRows(rows, '  ')).toEqual(rows)
   })
 })
